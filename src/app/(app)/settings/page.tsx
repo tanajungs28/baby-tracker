@@ -4,6 +4,7 @@ import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { useBaby } from "@/hooks/useBaby";
+import { toast } from "sonner";
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -47,6 +48,31 @@ export default function SettingsPage() {
               </p>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* 招待コード */}
+      {baby?.invite_code && (
+        <div className="bg-white rounded-2xl p-5 border-2 border-[#FFD6E0]">
+          <p className="text-xs text-[#5C4A3D]/50 mb-2">パートナーへの招待コード 🔑</p>
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-3xl font-bold tracking-widest text-[#5C4A3D] font-['Nunito']">
+              {baby.invite_code}
+            </span>
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(baby.invite_code);
+                toast.success("コードをコピーしました");
+              }}
+              aria-label="招待コードをコピー"
+              className="bg-[#FFD6E0] text-[#5C4A3D] rounded-xl px-4 py-2 text-sm font-medium active:scale-95 transition-transform"
+            >
+              コピー
+            </button>
+          </div>
+          <p className="text-xs text-[#5C4A3D]/50 mt-2">
+            このコードをパートナーに伝えて、ログイン後に入力してもらってください
+          </p>
         </div>
       )}
 

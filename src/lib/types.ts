@@ -5,6 +5,7 @@ export interface Baby {
   user_id: string;
   name: string;
   birth_date: string;
+  invite_code: string;
   created_at: string;
 }
 
