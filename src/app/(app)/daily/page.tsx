@@ -87,7 +87,7 @@ export default function DailyPage() {
       </div>
 
       {/* マトリクス */}
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-auto overscroll-none">
         {baby ? (
           <RecordMatrix
             records={records}

@@ -34,6 +34,20 @@ function getCellValue(record: BabyRecord | undefined, type: RecordType): string 
   return "";
 }
 
+function calcTotals(records: BabyRecord[]): { [K in RecordType]: number } {
+  const totals = { breastfeeding: 0, pumping: 0, formula: 0, pee: 0, poop: 0 };
+  records.forEach((r) => {
+    totals[r.type] += r.count ?? r.amount_ml ?? 0;
+  });
+  return totals;
+}
+
+function formatTotal(type: RecordType, value: number): string {
+  if (value === 0) return "−";
+  if (type === "pumping" || type === "formula") return `${value}ml`;
+  return `${value}回`;
+}
+
 export default function RecordMatrix({
   records,
   date,
@@ -55,10 +69,6 @@ export default function RecordMatrix({
     return records.find((r) => r.recorded_hour === hour && r.type === type);
   }
 
-  function handleCellTap(hour: number, type: RecordType) {
-    setModal({ hour, type });
-  }
-
   function handleSave(count: number | null, amount_ml: number | null) {
     if (!modal) return;
     onUpsert(modal.hour, modal.type, count, amount_ml);
@@ -71,87 +81,111 @@ export default function RecordMatrix({
     setModal(null);
   }
 
-  const modalRecord = modal
-    ? getRecord(modal.hour, modal.type)
-    : undefined;
+  const totals = calcTotals(records);
+  const modalRecord = modal ? getRecord(modal.hour, modal.type) : undefined;
 
   return (
     <>
-      <div className="overflow-auto">
-        <table className="w-full border-collapse text-xs" style={{ minWidth: "340px" }}>
-          <thead className="sticky top-0 z-10 bg-[#FFF9F2]">
-            <tr>
-              <th className="w-12 py-2 text-center text-[#5C4A3D]/40 font-normal text-xs border-b border-[#FFD6E0]">
-                時間
+      <table className="w-full border-collapse text-xs" style={{ minWidth: "340px" }}>
+        <thead className="sticky top-0 z-10 bg-[#FFF9F2]">
+          {/* 項目名 */}
+          <tr>
+            <th className="w-12 py-2 text-center text-[#5C4A3D]/40 font-normal text-xs border-b border-[#FFD6E0]">
+              時間
+            </th>
+            {RECORD_TYPES.map((type) => (
+              <th
+                key={type}
+                className="py-2 text-center font-medium text-[#5C4A3D] border-b border-[#FFD6E0]"
+              >
+                <div className="flex flex-col items-center gap-0.5">
+                  <span className="text-base">{RECORD_TYPE_EMOJIS[type]}</span>
+                  <span className="text-[10px]">{RECORD_TYPE_LABELS[type]}</span>
+                </div>
               </th>
-              {RECORD_TYPES.map((type) => (
-                <th
-                  key={type}
-                  className="py-2 text-center font-medium text-[#5C4A3D] border-b border-[#FFD6E0]"
-                >
-                  <div className="flex flex-col items-center gap-0.5">
-                    <span className="text-base">{RECORD_TYPE_EMOJIS[type]}</span>
-                    <span className="text-[10px]">{RECORD_TYPE_LABELS[type]}</span>
-                  </div>
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {Array.from({ length: 24 }, (_, hour) => {
-              const isCurrentHour = isToday && hour === currentHour;
+            ))}
+          </tr>
+          {/* 合計行 */}
+          <tr className="bg-[#FFF9F2]">
+            <td className="py-1 text-center text-[#5C4A3D]/40 text-[10px] border-b-2 border-[#FFD6E0]">
+              合計
+            </td>
+            {RECORD_TYPES.map((type) => {
+              const color = RECORD_TYPE_COLORS[type];
+              const value = totals[type];
               return (
-                <tr
-                  key={hour}
-                  ref={isCurrentHour ? currentRowRef : undefined}
-                  className={isCurrentHour ? "bg-[#FFD6E0]/40" : ""}
+                <td
+                  key={type}
+                  className="py-1 text-center border-b-2 border-[#FFD6E0]"
                 >
-                  <td className="py-1.5 text-center text-[#5C4A3D]/50 border-b border-[#FFD6E0]/40 text-xs">
-                    <div className="flex items-center justify-center gap-0.5">
-                      {isCurrentHour && (
-                        <span className="text-[#FF8FA3] text-[10px]">▶</span>
-                      )}
-                      {`${hour}:00`}
-                    </div>
-                  </td>
-                  {RECORD_TYPES.map((type) => {
-                    const record = getRecord(hour, type);
-                    const value = getCellValue(record, type);
-                    const color = RECORD_TYPE_COLORS[type];
-
-                    return (
-                      <td
-                        key={type}
-                        className="py-1 px-0.5 text-center border-b border-[#FFD6E0]/40"
-                      >
-                        <button
-                          onClick={() => handleCellTap(hour, type)}
-                          aria-label={`${hour}時 ${RECORD_TYPE_LABELS[type]}を記録`}
-                          className="w-full min-h-[44px] min-w-[44px] rounded-xl flex items-center justify-center active:scale-90 transition-transform"
-                          style={{
-                            backgroundColor: value ? `${color}60` : "transparent",
-                          }}
-                        >
-                          {value ? (
-                            <span
-                              className="text-[10px] font-semibold leading-tight text-center"
-                              style={{ color: "#5C4A3D" }}
-                            >
-                              {value}
-                            </span>
-                          ) : (
-                            <span className="text-[#5C4A3D]/15 text-xs">·</span>
-                          )}
-                        </button>
-                      </td>
-                    );
-                  })}
-                </tr>
+                  <span
+                    className="text-[11px] font-bold px-1.5 py-0.5 rounded-lg"
+                    style={{
+                      backgroundColor: value > 0 ? `${color}60` : "transparent",
+                      color: value > 0 ? "#5C4A3D" : "#5C4A3D40",
+                    }}
+                  >
+                    {formatTotal(type, value)}
+                  </span>
+                </td>
               );
             })}
-          </tbody>
-        </table>
-      </div>
+          </tr>
+        </thead>
+        <tbody>
+          {Array.from({ length: 24 }, (_, hour) => {
+            const isCurrentHour = isToday && hour === currentHour;
+            return (
+              <tr
+                key={hour}
+                ref={isCurrentHour ? currentRowRef : undefined}
+                className={isCurrentHour ? "bg-[#FFD6E0]/40" : ""}
+              >
+                <td className="py-1.5 text-center text-[#5C4A3D]/50 border-b border-[#FFD6E0]/40 text-xs">
+                  <div className="flex items-center justify-center gap-0.5">
+                    {isCurrentHour && (
+                      <span className="text-[#FF8FA3] text-[10px]">▶</span>
+                    )}
+                    {`${hour}:00`}
+                  </div>
+                </td>
+                {RECORD_TYPES.map((type) => {
+                  const record = getRecord(hour, type);
+                  const value = getCellValue(record, type);
+                  const color = RECORD_TYPE_COLORS[type];
+
+                  return (
+                    <td
+                      key={type}
+                      className="py-1 px-0.5 text-center border-b border-[#FFD6E0]/40"
+                    >
+                      <button
+                        onClick={() => setModal({ hour, type })}
+                        aria-label={`${hour}時 ${RECORD_TYPE_LABELS[type]}を記録`}
+                        className="w-full min-h-[44px] min-w-[44px] rounded-xl flex items-center justify-center active:scale-90 transition-transform"
+                        style={{
+                          backgroundColor: value ? `${color}60` : "transparent",
+                        }}
+                      >
+                        {value ? (
+                          <span
+                            className="text-[10px] font-semibold leading-tight text-center"
+                            style={{ color: "#5C4A3D" }}
+                          >
+                            {value}
+                          </span>
+                        ) : (
+                          <span className="text-[#5C4A3D]/15 text-xs">·</span>
+                        )}
+                      </button>
+                    </td>
+                  );
+                })}
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
 
       {modal && (
         <InputModal
