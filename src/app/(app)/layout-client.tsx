@@ -30,7 +30,7 @@ export default function AppLayoutClient({
 
   return (
     <>
-      <main className="flex-1 pb-20 overflow-auto">{children}</main>
+      <main className="flex-1 pb-20 overflow-hidden h-full">{children}</main>
 
       {/* 下部タブバー */}
       <nav

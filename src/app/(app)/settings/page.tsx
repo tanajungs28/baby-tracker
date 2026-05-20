@@ -27,7 +27,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="px-4 py-6 space-y-4 max-w-lg mx-auto">
+    <div className="px-4 py-6 space-y-4 max-w-lg mx-auto h-full overflow-auto">
       <h1 className="text-xl font-bold text-[#5C4A3D]">せってい</h1>
 
       {/* 赤ちゃん情報カード */}

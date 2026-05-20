@@ -36,7 +36,7 @@ export default function SummaryPage() {
   const isLatest = anchor.getTime() >= today.getTime();
 
   return (
-    <div className="flex flex-col min-h-full">
+    <div className="flex flex-col h-full overflow-auto">
       {/* ヘッダー */}
       <div className="sticky top-0 z-10 bg-[#FFF9F2] border-b-2 border-[#FFD6E0] px-4 pt-4 pb-2">
         <Tabs value={period} onValueChange={(v) => setPeriod(v as PeriodType)}>
