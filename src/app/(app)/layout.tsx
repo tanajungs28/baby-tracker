@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import AppLayoutClient from "./layout-client";
 
+export const dynamic = "force-dynamic";
+
 export default async function AppLayout({
   children,
 }: {
