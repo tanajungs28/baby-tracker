@@ -10,7 +10,12 @@ function getDateRange(
   anchor: Date,
   period: PeriodType
 ): { start: string; end: string; labels: string[] } {
-  const fmt = (d: Date) => d.toISOString().split("T")[0];
+  const fmt = (d: Date) => {
+    const y = d.getFullYear();
+    const mo = String(d.getMonth() + 1).padStart(2, "0");
+    const da = String(d.getDate()).padStart(2, "0");
+    return `${y}-${mo}-${da}`;
+  };
   const pad = (n: number) => String(n).padStart(2, "0");
 
   if (period === "day") {
