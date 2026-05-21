@@ -68,8 +68,13 @@ export function useSummary(
   const supabase = createClient();
   const { start, end, labels } = getDateRange(anchor, period);
 
+  const { data: userId } = useSWR("auth-uid", async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    return user?.id ?? null;
+  });
+
   const { data } = useSWR<SummaryData>(
-    babyId ? `summary-${babyId}-${period}-${start}-${end}` : null,
+    babyId && userId ? `summary-${userId}-${babyId}-${period}-${start}-${end}` : null,
     async () => {
       const { data: rows } = await supabase
         .from("records")

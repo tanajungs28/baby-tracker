@@ -14,7 +14,8 @@ export default function SettingsPage() {
 
   async function handleLogout() {
     await supabase.auth.signOut();
-    router.replace("/login");
+    // フルリロードで SWR インメモリキャッシュを完全にクリア
+    window.location.href = "/login";
   }
 
   if (baby === undefined) {

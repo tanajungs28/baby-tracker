@@ -13,8 +13,13 @@ export function useRecords(babyId: string | undefined, date: Date) {
   const supabase = createClient();
   const dateStr = formatDate(date);
 
+  const { data: userId } = useSWR("auth-uid", async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    return user?.id ?? null;
+  });
+
   const { data, mutate, error, isLoading } = useSWR<BabyRecord[]>(
-    babyId ? `records-${babyId}-${dateStr}` : null,
+    babyId && userId ? `records-${userId}-${babyId}-${dateStr}` : null,
     async () => {
       const { data, error } = await supabase
         .from("records")
