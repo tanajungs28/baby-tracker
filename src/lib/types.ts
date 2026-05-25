@@ -53,3 +53,16 @@ export const RECORD_TYPE_EMOJIS: { [K in RecordType]: string } = {
   pee: "💧",
   poop: "🟤",
 };
+
+export type SleepPerson = "papa" | "mama";
+
+export interface SleepRecord {
+  id: string;
+  user_id: string;
+  baby_id: string;
+  person: SleepPerson;
+  recorded_date: string;
+  recorded_hour: number;
+  created_at: string;
+  updated_at: string;
+}

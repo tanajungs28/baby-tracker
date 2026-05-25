@@ -17,6 +17,7 @@ interface AppLayoutClientProps {
 const NAV_ITEMS = [
   { href: "/daily", label: "きろく", emoji: "📝" },
   { href: "/summary", label: "グラフ", emoji: "📊" },
+  { href: "/sleep", label: "すいみん", emoji: "😴" },
   { href: "/settings", label: "せってい", emoji: "⚙️" },
 ];
 
