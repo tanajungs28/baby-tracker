@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect } from "react";
+import { useEffect, useRef } from "react";
 import type { SleepRecord, SleepPerson } from "@/lib/types";
 
 const PEOPLE: { key: SleepPerson; label: string; emoji: string; color: string }[] = [
@@ -15,9 +15,6 @@ interface SleepMatrixProps {
 }
 
 export default function SleepMatrix({ records, isToday, onToggle }: SleepMatrixProps) {
-  const dragging = useRef(false);
-  const dragMode = useRef<"add" | "remove">("add");
-  const lastCell = useRef<string | null>(null);
   const currentHour = new Date().getHours();
   const currentRowRef = useRef<HTMLTableRowElement>(null);
 
@@ -29,42 +26,6 @@ export default function SleepMatrix({ records, isToday, onToggle }: SleepMatrixP
 
   function isActive(hour: number, person: SleepPerson): boolean {
     return records.some((r) => r.recorded_hour === hour && r.person === person);
-  }
-
-  // マウスドラッグ専用（タッチはonClickで操作）
-  function handleMouseDown(e: React.MouseEvent<HTMLDivElement>, hour: number, person: SleepPerson) {
-    e.preventDefault();
-    dragging.current = true;
-    const active = isActive(hour, person);
-    dragMode.current = active ? "remove" : "add";
-    lastCell.current = `${hour}-${person}`;
-    onToggle(hour, person, active);
-  }
-
-  function handleMouseMove(e: React.MouseEvent<HTMLTableElement>) {
-    if (!dragging.current) return;
-    const el = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null;
-    const cell = el?.closest("[data-hour][data-person]") as HTMLElement | null;
-    if (!cell) return;
-    const hour = parseInt(cell.dataset.hour!);
-    const person = cell.dataset.person as SleepPerson;
-    const cellKey = `${hour}-${person}`;
-    if (lastCell.current === cellKey) return;
-    lastCell.current = cellKey;
-    const active = isActive(hour, person);
-    if (dragMode.current === "add" && !active) onToggle(hour, person, false);
-    else if (dragMode.current === "remove" && active) onToggle(hour, person, true);
-  }
-
-  function handleMouseUp() {
-    dragging.current = false;
-    lastCell.current = null;
-  }
-
-  // タッチ（モバイル）はシンプルなタップトグル
-  function handleClick(hour: number, person: SleepPerson) {
-    if (dragging.current) return;
-    onToggle(hour, person, isActive(hour, person));
   }
 
   const totals = {
@@ -80,12 +41,7 @@ export default function SleepMatrix({ records, isToday, onToggle }: SleepMatrixP
   }
 
   return (
-    <table
-      className="w-full border-collapse text-xs select-none"
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseUp}
-    >
+    <table className="w-full border-collapse text-xs select-none">
       <thead className="sticky top-0 z-10 bg-[#FFF9F2]">
         <tr>
           <th className="w-14 py-2 text-center text-[#5C4A3D]/40 font-normal text-xs border-b border-[#FFD6E0]">
@@ -138,19 +94,15 @@ export default function SleepMatrix({ records, isToday, onToggle }: SleepMatrixP
                 const active = isActive(hour, p.key);
                 return (
                   <td key={p.key} className="py-0.5 px-2 border-b border-[#FFD6E0]/40">
-                    <div
-                      data-hour={hour}
-                      data-person={p.key}
-                      role="button"
-                      aria-label={`${hour}時 ${p.label} ${active ? "ON" : "OFF"}`}
+                    <button
+                      aria-label={`${hour}時 ${p.label} ${active ? "取り消し" : "記録"}`}
                       aria-pressed={active}
-                      className="w-full min-h-[44px] rounded-xl transition-colors cursor-pointer active:opacity-70"
+                      onClick={() => onToggle(hour, p.key, active)}
+                      className="w-full min-h-[44px] rounded-xl transition-colors active:opacity-60"
                       style={{
                         backgroundColor: active ? `${p.color}90` : "#F0F0F0",
                         border: active ? `2px solid ${p.color}` : "2px solid transparent",
                       }}
-                      onMouseDown={(e) => handleMouseDown(e, hour, p.key)}
-                      onClick={() => handleClick(hour, p.key)}
                     />
                   </td>
                 );
