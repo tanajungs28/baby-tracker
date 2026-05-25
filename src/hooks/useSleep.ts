@@ -32,7 +32,11 @@ export function useSleep(babyId: string | undefined, date: Date) {
       if (error) throw error;
       return data as SleepRecord[];
     },
-    { onError: () => toast.error("データの読み込みに失敗しました") }
+    {
+      onError: () => toast.error("データの読み込みに失敗しました"),
+      shouldRetryOnError: false,
+      errorRetryCount: 0,
+    }
   );
 
   async function toggleSleep(hour: number, person: SleepPerson, currentlyActive: boolean) {

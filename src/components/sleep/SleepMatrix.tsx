@@ -31,7 +31,8 @@ export default function SleepMatrix({ records, isToday, onToggle }: SleepMatrixP
     return records.some((r) => r.recorded_hour === hour && r.person === person);
   }
 
-  function handlePointerDown(e: React.PointerEvent<HTMLDivElement>, hour: number, person: SleepPerson) {
+  // マウスドラッグ専用（タッチはonClickで操作）
+  function handleMouseDown(e: React.MouseEvent<HTMLDivElement>, hour: number, person: SleepPerson) {
     e.preventDefault();
     dragging.current = true;
     const active = isActive(hour, person);
@@ -40,7 +41,7 @@ export default function SleepMatrix({ records, isToday, onToggle }: SleepMatrixP
     onToggle(hour, person, active);
   }
 
-  function handlePointerMove(e: React.PointerEvent<HTMLTableElement>) {
+  function handleMouseMove(e: React.MouseEvent<HTMLTableElement>) {
     if (!dragging.current) return;
     const el = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null;
     const cell = el?.closest("[data-hour][data-person]") as HTMLElement | null;
@@ -55,9 +56,15 @@ export default function SleepMatrix({ records, isToday, onToggle }: SleepMatrixP
     else if (dragMode.current === "remove" && active) onToggle(hour, person, true);
   }
 
-  function handlePointerUp() {
+  function handleMouseUp() {
     dragging.current = false;
     lastCell.current = null;
+  }
+
+  // タッチ（モバイル）はシンプルなタップトグル
+  function handleClick(hour: number, person: SleepPerson) {
+    if (dragging.current) return;
+    onToggle(hour, person, isActive(hour, person));
   }
 
   const totals = {
@@ -75,10 +82,9 @@ export default function SleepMatrix({ records, isToday, onToggle }: SleepMatrixP
   return (
     <table
       className="w-full border-collapse text-xs select-none"
-      style={{ touchAction: "none", minWidth: "200px" }}
-      onPointerMove={handlePointerMove}
-      onPointerUp={handlePointerUp}
-      onPointerLeave={handlePointerUp}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+      onMouseLeave={handleMouseUp}
     >
       <thead className="sticky top-0 z-10 bg-[#FFF9F2]">
         <tr>
@@ -135,12 +141,16 @@ export default function SleepMatrix({ records, isToday, onToggle }: SleepMatrixP
                     <div
                       data-hour={hour}
                       data-person={p.key}
-                      className="w-full min-h-[44px] rounded-xl transition-colors cursor-pointer"
+                      role="button"
+                      aria-label={`${hour}時 ${p.label} ${active ? "ON" : "OFF"}`}
+                      aria-pressed={active}
+                      className="w-full min-h-[44px] rounded-xl transition-colors cursor-pointer active:opacity-70"
                       style={{
-                        backgroundColor: active ? `${p.color}90` : "#F5F5F5",
+                        backgroundColor: active ? `${p.color}90` : "#F0F0F0",
                         border: active ? `2px solid ${p.color}` : "2px solid transparent",
                       }}
-                      onPointerDown={(e) => handlePointerDown(e, hour, p.key)}
+                      onMouseDown={(e) => handleMouseDown(e, hour, p.key)}
+                      onClick={() => handleClick(hour, p.key)}
                     />
                   </td>
                 );
