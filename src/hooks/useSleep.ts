@@ -21,7 +21,7 @@ export function useSleep(babyId: string | undefined, date: Date) {
     return user?.id ?? null;
   });
 
-  const { data, mutate } = useSWR<SleepRecord[]>(
+  const { data, mutate, error: fetchError } = useSWR<SleepRecord[]>(
     babyId && userId ? `sleep-${userId}-${babyId}-${dateStr}` : null,
     async () => {
       const { data, error } = await supabase
@@ -40,7 +40,7 @@ export function useSleep(babyId: string | undefined, date: Date) {
   );
 
   async function toggleSleep(hour: number, person: SleepPerson, currentlyActive: boolean) {
-    if (!babyId || !userId) return;
+    if (!babyId || !userId || fetchError) return;
 
     const optimistic = currentlyActive
       ? (data ?? []).filter((r) => !(r.recorded_hour === hour && r.person === person))
