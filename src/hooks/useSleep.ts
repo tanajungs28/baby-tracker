@@ -3,6 +3,7 @@
 import useSWR from "swr";
 import { createClient } from "@/lib/supabase/client";
 import type { SleepRecord, SleepPerson } from "@/lib/types";
+import type { PeriodType } from "@/hooks/useSummary";
 import { toast } from "sonner";
 
 function formatLocalDate(date: Date): string {
@@ -85,26 +86,91 @@ export function useSleep(babyId: string | undefined, date: Date) {
   return { sleepRecords: data ?? [], toggleSleep };
 }
 
-export function useSleepSummary(babyId: string | undefined) {
+// --- Sleep summary ---
+
+function getSleepDateRange(anchor: Date, period: PeriodType) {
+  const fmt = (d: Date) => {
+    const y = d.getFullYear();
+    const mo = String(d.getMonth() + 1).padStart(2, "0");
+    const da = String(d.getDate()).padStart(2, "0");
+    return `${y}-${mo}-${da}`;
+  };
+
+  if (period === "day") {
+    const days = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(anchor);
+      d.setDate(d.getDate() - 6 + i);
+      return d;
+    });
+    return {
+      start: fmt(days[0]),
+      end: fmt(days[6]),
+      labels: days.map((d) => `${d.getMonth() + 1}/${d.getDate()}`),
+      getLabel: (dateStr: string) => {
+        const d = new Date(dateStr + "T00:00:00");
+        return `${d.getMonth() + 1}/${d.getDate()}`;
+      },
+    };
+  }
+
+  if (period === "week") {
+    const weeks = Array.from({ length: 6 }, (_, i) => {
+      const start = new Date(anchor);
+      start.setDate(start.getDate() - (5 - i) * 7);
+      const end = new Date(start);
+      end.setDate(end.getDate() + 6);
+      return { start, end, label: `${start.getMonth() + 1}/${start.getDate()}〜` };
+    });
+    return {
+      start: fmt(weeks[0].start),
+      end: fmt(anchor),
+      labels: weeks.map((w) => w.label),
+      getLabel: (dateStr: string) => {
+        const d = new Date(dateStr + "T00:00:00");
+        const w = weeks.find(({ start, end }) => d >= start && d <= end);
+        return w ? w.label : weeks[0].label;
+      },
+    };
+  }
+
+  // month
+  const months = Array.from({ length: 3 }, (_, i) =>
+    new Date(anchor.getFullYear(), anchor.getMonth() - 2 + i, 1)
+  );
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return {
+    start: fmt(months[0]),
+    end: fmt(new Date(months[2].getFullYear(), months[2].getMonth() + 1, 0)),
+    labels: months.map((d) => `${d.getFullYear()}/${pad(d.getMonth() + 1)}`),
+    getLabel: (dateStr: string) => {
+      const d = new Date(dateStr + "T00:00:00");
+      return `${d.getFullYear()}/${pad(d.getMonth() + 1)}`;
+    },
+  };
+}
+
+export interface SleepSummaryData {
+  labels: string[];
+  papa: number[];
+  mama: number[];
+  totals: { papa: number; mama: number };
+}
+
+export function useSleepSummary(
+  babyId: string | undefined,
+  anchor: Date,
+  period: PeriodType
+) {
   const supabase = createClient();
+  const { start, end, labels, getLabel } = getSleepDateRange(anchor, period);
 
   const { data: userId } = useSWR("auth-uid", async () => {
     const { data: { user } } = await supabase.auth.getUser();
     return user?.id ?? null;
   });
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const days = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(today);
-    d.setDate(d.getDate() - 6 + i);
-    return d;
-  });
-  const start = formatLocalDate(days[0]);
-  const end = formatLocalDate(days[6]);
-
-  const { data } = useSWR(
-    babyId && userId ? `sleep-summary-${userId}-${babyId}-${start}-${end}` : null,
+  const { data } = useSWR<SleepSummaryData>(
+    babyId && userId ? `sleep-summary-${userId}-${babyId}-${period}-${start}-${end}` : null,
     async () => {
       const { data, error } = await supabase
         .from("sleep_records")
@@ -114,18 +180,33 @@ export function useSleepSummary(babyId: string | undefined) {
         .lte("recorded_date", end);
       if (error) throw error;
 
-      return days.map((d) => {
-        const dateStr = formatLocalDate(d);
-        const dayRecords = (data as SleepRecord[]).filter((r) => r.recorded_date === dateStr);
-        // スロット数 × 30分 ÷ 60 = 時間数
-        return {
-          label: `${d.getMonth() + 1}/${d.getDate()}`,
-          papa: Math.round((dayRecords.filter((r) => r.person === "papa").length * 30 / 60) * 10) / 10,
-          mama: Math.round((dayRecords.filter((r) => r.person === "mama").length * 30 / 60) * 10) / 10,
-        };
+      const records = (data ?? []) as SleepRecord[];
+
+      const papaMins: { [l: string]: number } = {};
+      const mamaMins: { [l: string]: number } = {};
+      labels.forEach((l) => { papaMins[l] = 0; mamaMins[l] = 0; });
+
+      records.forEach((r) => {
+        const label = getLabel(r.recorded_date);
+        if (r.person === "papa") papaMins[label] = (papaMins[label] ?? 0) + 30;
+        else mamaMins[label] = (mamaMins[label] ?? 0) + 30;
       });
+
+      const toH = (m: number) => Math.round((m / 60) * 10) / 10;
+      const papaH = labels.map((l) => toH(papaMins[l] ?? 0));
+      const mamaH = labels.map((l) => toH(mamaMins[l] ?? 0));
+
+      return {
+        labels,
+        papa: papaH,
+        mama: mamaH,
+        totals: {
+          papa: Math.round(papaH.reduce((a, b) => a + b, 0) * 10) / 10,
+          mama: Math.round(mamaH.reduce((a, b) => a + b, 0) * 10) / 10,
+        },
+      };
     }
   );
 
-  return { chartData: data ?? [] };
+  return { sleepSummary: data ?? null, dateRange: { start, end } };
 }
