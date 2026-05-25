@@ -3,8 +3,8 @@
 import { useRef, useEffect } from "react";
 import type { SleepRecord, SleepPerson } from "@/lib/types";
 
-const SLOT_H = 18; // px per 10-min slot
-const TOTAL_SLOTS = 144; // 24h × 6
+const SLOT_H = 36; // px per 30-min slot
+const TOTAL_SLOTS = 48; // 24h × 2
 
 const PEOPLE: { key: SleepPerson; label: string; emoji: string; color: string }[] = [
   { key: "papa", label: "パパ", emoji: "👨", color: "#A8D8EA" },
@@ -25,7 +25,7 @@ export default function SleepTimeline({ records, isToday, onToggle }: SleepTimel
 
   const now = new Date();
   const currentSlot = isToday
-    ? Math.floor(now.getHours() * 6 + now.getMinutes() / 10)
+    ? Math.floor(now.getHours() * 2 + now.getMinutes() / 30)
     : -1;
 
   useEffect(() => {
@@ -34,7 +34,6 @@ export default function SleepTimeline({ records, isToday, onToggle }: SleepTimel
     }
   }, [isToday]);
 
-  // グローバルでpointerupを捕まえてドラッグ終了
   useEffect(() => {
     const end = () => { dragging.current = false; lastKey.current = null; };
     window.addEventListener("pointerup", end);
@@ -65,8 +64,8 @@ export default function SleepTimeline({ records, isToday, onToggle }: SleepTimel
   }
 
   const totals = {
-    papa: records.filter((r) => r.person === "papa").length * 10,
-    mama: records.filter((r) => r.person === "mama").length * 10,
+    papa: records.filter((r) => r.person === "papa").length * 30,
+    mama: records.filter((r) => r.person === "mama").length * 30,
   };
 
   function fmtDuration(m: number) {
@@ -113,7 +112,7 @@ export default function SleepTimeline({ records, isToday, onToggle }: SleepTimel
       </thead>
       <tbody>
         {Array.from({ length: TOTAL_SLOTS }, (_, i) => {
-          const minute = i * 10;
+          const minute = i * 30;
           const hour = Math.floor(minute / 60);
           const min = minute % 60;
           const isHourMark = min === 0;
@@ -126,30 +125,27 @@ export default function SleepTimeline({ records, isToday, onToggle }: SleepTimel
               style={{ height: SLOT_H }}
               className={isCurrent ? "bg-[#FFD6E0]/30" : ""}
             >
-              {/* 時刻列: スクロール用（touchAction なし） */}
               <td
-                className={`text-center text-[#5C4A3D]/60 ${
+                className={`text-center ${
                   isHourMark
-                    ? "border-t border-[#FFD6E0] font-medium text-[10px]"
+                    ? "border-t border-[#FFD6E0] font-medium text-[10px] text-[#5C4A3D]/60"
                     : "text-[9px] text-[#5C4A3D]/30"
                 }`}
                 style={{ padding: 0, verticalAlign: "middle" }}
               >
-                {isHourMark ? (
-                  <span className="flex items-center justify-center gap-0.5">
-                    {isCurrent && <span className="text-[#FF8FA3]">▶</span>}
-                    {`${hour}:00`}
-                  </span>
-                ) : (
-                  <span className="opacity-0">·</span>
-                )}
+                <span className="flex items-center justify-center gap-0.5">
+                  {isCurrent && <span className="text-[#FF8FA3]">▶</span>}
+                  {isHourMark
+                    ? `${hour}:00`
+                    : <span className="text-[#5C4A3D]/25">:30</span>
+                  }
+                </span>
               </td>
 
-              {/* データ列: touchAction:none でドラッグ記録 */}
               {PEOPLE.map((p) => {
                 const active = isActive(minute, p.key);
-                const prevActive = i > 0 && isActive((i - 1) * 10, p.key);
-                const nextActive = i < TOTAL_SLOTS - 1 && isActive((i + 1) * 10, p.key);
+                const prevActive = i > 0 && isActive((i - 1) * 30, p.key);
+                const nextActive = i < TOTAL_SLOTS - 1 && isActive((i + 1) * 30, p.key);
                 const isTop = active && !prevActive;
                 const isBottom = active && !nextActive;
 

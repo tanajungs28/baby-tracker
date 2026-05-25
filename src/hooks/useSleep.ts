@@ -117,11 +117,11 @@ export function useSleepSummary(babyId: string | undefined) {
       return days.map((d) => {
         const dateStr = formatLocalDate(d);
         const dayRecords = (data as SleepRecord[]).filter((r) => r.recorded_date === dateStr);
-        // スロット数 × 10分 ÷ 60 = 時間数
+        // スロット数 × 30分 ÷ 60 = 時間数
         return {
           label: `${d.getMonth() + 1}/${d.getDate()}`,
-          papa: Math.round((dayRecords.filter((r) => r.person === "papa").length * 10 / 60) * 10) / 10,
-          mama: Math.round((dayRecords.filter((r) => r.person === "mama").length * 10 / 60) * 10) / 10,
+          papa: Math.round((dayRecords.filter((r) => r.person === "papa").length * 30 / 60) * 10) / 10,
+          mama: Math.round((dayRecords.filter((r) => r.person === "mama").length * 30 / 60) * 10) / 10,
         };
       });
     }
