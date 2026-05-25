@@ -39,20 +39,20 @@ export function useSleep(babyId: string | undefined, date: Date) {
     }
   );
 
-  async function toggleSleep(hour: number, person: SleepPerson, currentlyActive: boolean) {
+  async function toggleSleep(minute: number, person: SleepPerson, currentlyActive: boolean) {
     if (!babyId || !userId || fetchError) return;
 
     const optimistic = currentlyActive
-      ? (data ?? []).filter((r) => !(r.recorded_hour === hour && r.person === person))
+      ? (data ?? []).filter((r) => !(r.recorded_minute === minute && r.person === person))
       : [
           ...(data ?? []),
           {
-            id: "optimistic",
+            id: "optimistic-" + minute,
             user_id: userId,
             baby_id: babyId,
             person,
             recorded_date: dateStr,
-            recorded_hour: hour,
+            recorded_minute: minute,
             created_at: "",
             updated_at: "",
           } as SleepRecord,
@@ -66,18 +66,18 @@ export function useSleep(babyId: string | undefined, date: Date) {
         .eq("baby_id", babyId)
         .eq("person", person)
         .eq("recorded_date", dateStr)
-        .eq("recorded_hour", hour);
-      if (error) toast.error("削除に失敗しました");
+        .eq("recorded_minute", minute);
+      if (error) { toast.error("削除に失敗しました"); mutate(); return; }
     } else {
       const { data: { user } } = await createClient().auth.getUser();
       if (!user) return;
       const { error } = await supabase
         .from("sleep_records")
         .upsert(
-          { user_id: user.id, baby_id: babyId, person, recorded_date: dateStr, recorded_hour: hour },
-          { onConflict: "baby_id,person,recorded_date,recorded_hour" }
+          { user_id: user.id, baby_id: babyId, person, recorded_date: dateStr, recorded_minute: minute },
+          { onConflict: "baby_id,person,recorded_date,recorded_minute" }
         );
-      if (error) toast.error("保存に失敗しました");
+      if (error) { toast.error("保存に失敗しました"); mutate(); return; }
     }
     mutate();
   }
@@ -93,7 +93,6 @@ export function useSleepSummary(babyId: string | undefined) {
     return user?.id ?? null;
   });
 
-  // 過去7日分
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const days = Array.from({ length: 7 }, (_, i) => {
@@ -118,10 +117,11 @@ export function useSleepSummary(babyId: string | undefined) {
       return days.map((d) => {
         const dateStr = formatLocalDate(d);
         const dayRecords = (data as SleepRecord[]).filter((r) => r.recorded_date === dateStr);
+        // スロット数 × 10分 ÷ 60 = 時間数
         return {
           label: `${d.getMonth() + 1}/${d.getDate()}`,
-          papa: dayRecords.filter((r) => r.person === "papa").length,
-          mama: dayRecords.filter((r) => r.person === "mama").length,
+          papa: Math.round((dayRecords.filter((r) => r.person === "papa").length * 10 / 60) * 10) / 10,
+          mama: Math.round((dayRecords.filter((r) => r.person === "mama").length * 10 / 60) * 10) / 10,
         };
       });
     }

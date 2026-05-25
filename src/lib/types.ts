@@ -62,7 +62,7 @@ export interface SleepRecord {
   baby_id: string;
   person: SleepPerson;
   recorded_date: string;
-  recorded_hour: number;
+  recorded_minute: number;
   created_at: string;
   updated_at: string;
 }

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useBaby } from "@/hooks/useBaby";
 import { useSleep, useSleepSummary } from "@/hooks/useSleep";
-import SleepMatrix from "@/components/sleep/SleepMatrix";
+import SleepTimeline from "@/components/sleep/SleepTimeline";
 import {
   LineChart,
   Line,
@@ -121,7 +121,7 @@ export default function SleepPage() {
       {/* コンテンツ */}
       {view === "record" ? (
         <div className="flex-1 overflow-auto overscroll-none">
-          <SleepMatrix
+          <SleepTimeline
             records={sleepRecords}
             isToday={isToday}
             onToggle={toggleSleep}
