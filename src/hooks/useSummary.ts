@@ -118,7 +118,9 @@ export function useSummary(
 
         if (!aggregated[label]) aggregated[label] = {};
         const prev = aggregated[label][r.type] ?? 0;
-        aggregated[label][r.type] = prev + (r.count ?? 0) + (r.amount_ml ?? 0);
+        const isAmountType = r.type === "pumping" || r.type === "formula";
+        const delta = isAmountType ? (r.amount_ml ?? 0) : (r.count ?? 0);
+        aggregated[label][r.type] = prev + delta;
       });
 
       const totals: { [K in RecordType]: number } = {
@@ -129,7 +131,8 @@ export function useSummary(
         poop: 0,
       };
       records.forEach((r) => {
-        totals[r.type] += r.count ?? r.amount_ml ?? 0;
+        const isAmountType = r.type === "pumping" || r.type === "formula";
+        totals[r.type] += isAmountType ? (r.amount_ml ?? 0) : (r.count ?? 0);
       });
 
       return {

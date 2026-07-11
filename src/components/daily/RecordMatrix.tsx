@@ -28,24 +28,53 @@ function getCellValue(record: BabyRecord | undefined, type: RecordType): string 
   if (type === "pumping" || type === "formula") {
     return record.amount_ml ? `${record.amount_ml}ml` : "";
   }
+  if (type === "breastfeeding") {
+    const parts: string[] = [];
+    if (record.count && record.count > 0) {
+      parts.push("●".repeat(Math.min(record.count, 5)));
+    }
+    if (record.amount_ml) {
+      parts.push(`${record.amount_ml}ml`);
+    }
+    return parts.join(" ");
+  }
   if (record.count && record.count > 0) {
     return "●".repeat(Math.min(record.count, 5));
   }
   return "";
 }
 
-function calcTotals(records: BabyRecord[]): { [K in RecordType]: number } {
-  const totals = { breastfeeding: 0, pumping: 0, formula: 0, pee: 0, poop: 0 };
+interface TypeTotal {
+  count: number;
+  ml: number;
+}
+
+function calcTotals(records: BabyRecord[]): { [K in RecordType]: TypeTotal } {
+  const totals: { [K in RecordType]: TypeTotal } = {
+    breastfeeding: { count: 0, ml: 0 },
+    pumping: { count: 0, ml: 0 },
+    formula: { count: 0, ml: 0 },
+    pee: { count: 0, ml: 0 },
+    poop: { count: 0, ml: 0 },
+  };
   records.forEach((r) => {
-    totals[r.type] += r.count ?? r.amount_ml ?? 0;
+    totals[r.type].count += r.count ?? 0;
+    totals[r.type].ml += r.amount_ml ?? 0;
   });
   return totals;
 }
 
-function formatTotal(type: RecordType, value: number): string {
-  if (value === 0) return "−";
-  if (type === "pumping" || type === "formula") return `${value}ml`;
-  return `${value}回`;
+function formatTotal(type: RecordType, total: TypeTotal): string {
+  if (type === "pumping" || type === "formula") {
+    return total.ml > 0 ? `${total.ml}ml` : "−";
+  }
+  if (type === "breastfeeding") {
+    const parts: string[] = [];
+    if (total.count > 0) parts.push(`${total.count}回`);
+    if (total.ml > 0) parts.push(`${total.ml}ml`);
+    return parts.length > 0 ? parts.join(" ") : "−";
+  }
+  return total.count > 0 ? `${total.count}回` : "−";
 }
 
 export default function RecordMatrix({
@@ -112,7 +141,8 @@ export default function RecordMatrix({
             </td>
             {RECORD_TYPES.map((type) => {
               const color = RECORD_TYPE_COLORS[type];
-              const value = totals[type];
+              const total = totals[type];
+              const hasValue = total.count > 0 || total.ml > 0;
               return (
                 <td
                   key={type}
@@ -121,11 +151,11 @@ export default function RecordMatrix({
                   <span
                     className="text-[11px] font-bold px-1.5 py-0.5 rounded-lg"
                     style={{
-                      backgroundColor: value > 0 ? `${color}60` : "transparent",
-                      color: value > 0 ? "#5C4A3D" : "#5C4A3D40",
+                      backgroundColor: hasValue ? `${color}60` : "transparent",
+                      color: hasValue ? "#5C4A3D" : "#5C4A3D40",
                     }}
                   >
-                    {formatTotal(type, value)}
+                    {formatTotal(type, total)}
                   </span>
                 </td>
               );

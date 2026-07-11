@@ -26,13 +26,16 @@ export default function InputModal({
   const [count, setCount] = useState<number>(existing?.count ?? 0);
   const [amountMl, setAmountMl] = useState<number>(existing?.amount_ml ?? 0);
 
+  const isBreastfeeding = type === "breastfeeding";
   const isAmountType = type === "pumping" || type === "formula";
   const color = RECORD_TYPE_COLORS[type];
   const label = RECORD_TYPE_LABELS[type];
   const emoji = RECORD_TYPE_EMOJIS[type];
 
   function handleSave() {
-    if (isAmountType) {
+    if (isBreastfeeding) {
+      onSave(count || null, amountMl || null);
+    } else if (isAmountType) {
       onSave(null, amountMl || null);
     } else {
       onSave(count || null, null);
@@ -76,7 +79,22 @@ export default function InputModal({
         </div>
 
         {/* 入力エリア */}
-        {isAmountType ? (
+        {isBreastfeeding ? (
+          <div className="space-y-6">
+            <section>
+              <p className="text-[#5C4A3D]/60 text-sm font-medium mb-3 text-center">
+                回数
+              </p>
+              <CountInput value={count} onChange={setCount} color={color} />
+            </section>
+            <section>
+              <p className="text-[#5C4A3D]/60 text-sm font-medium mb-3 text-center">
+                飲んだ量
+              </p>
+              <AmountInput value={amountMl} onChange={setAmountMl} color={color} />
+            </section>
+          </div>
+        ) : isAmountType ? (
           <AmountInput value={amountMl} onChange={setAmountMl} color={color} />
         ) : (
           <CountInput value={count} onChange={setCount} color={color} />
