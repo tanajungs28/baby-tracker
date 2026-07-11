@@ -55,14 +55,25 @@ function getDateRange(
   };
 }
 
+export interface SummaryTotals {
+  breastfeeding: number; // 回数
+  breastfeedingMl: number; // 授乳量 (ml)
+  pumping: number; // ml
+  formula: number; // ml
+  pee: number; // 回数
+  poop: number; // 回数
+}
+
 export interface SummaryData {
   labels: string[];
-  breastfeeding: number[];
+  breastfeeding: number[]; // 回数
+  breastfeedingMl: number[]; // 授乳量 (ml)
   pumping: number[];
   formula: number[];
   pee: number[];
   poop: number[];
-  totals: { [K in RecordType]: number };
+  totals: SummaryTotals;
+  days: number; // 期間の日数（平均算出用）
 }
 
 export function useSummary(
@@ -93,7 +104,11 @@ export function useSummary(
       const aggregated: {
         [label: string]: { [K in RecordType]?: number };
       } = {};
-      labels.forEach((l) => (aggregated[l] = {}));
+      const bfMlAggregated: { [label: string]: number } = {};
+      labels.forEach((l) => {
+        aggregated[l] = {};
+        bfMlAggregated[l] = 0;
+      });
 
       records.forEach((r) => {
         let label: string;
@@ -121,10 +136,14 @@ export function useSummary(
         const isAmountType = r.type === "pumping" || r.type === "formula";
         const delta = isAmountType ? (r.amount_ml ?? 0) : (r.count ?? 0);
         aggregated[label][r.type] = prev + delta;
+        if (r.type === "breastfeeding") {
+          bfMlAggregated[label] = (bfMlAggregated[label] ?? 0) + (r.amount_ml ?? 0);
+        }
       });
 
-      const totals: { [K in RecordType]: number } = {
+      const totals: SummaryTotals = {
         breastfeeding: 0,
+        breastfeedingMl: 0,
         pumping: 0,
         formula: 0,
         pee: 0,
@@ -133,16 +152,28 @@ export function useSummary(
       records.forEach((r) => {
         const isAmountType = r.type === "pumping" || r.type === "formula";
         totals[r.type] += isAmountType ? (r.amount_ml ?? 0) : (r.count ?? 0);
+        if (r.type === "breastfeeding") {
+          totals.breastfeedingMl += r.amount_ml ?? 0;
+        }
       });
+
+      const days =
+        Math.round(
+          (new Date(end + "T00:00:00").getTime() -
+            new Date(start + "T00:00:00").getTime()) /
+            86400000
+        ) + 1;
 
       return {
         labels,
         breastfeeding: labels.map((l) => aggregated[l]?.breastfeeding ?? 0),
+        breastfeedingMl: labels.map((l) => bfMlAggregated[l] ?? 0),
         pumping: labels.map((l) => aggregated[l]?.pumping ?? 0),
         formula: labels.map((l) => aggregated[l]?.formula ?? 0),
         pee: labels.map((l) => aggregated[l]?.pee ?? 0),
         poop: labels.map((l) => aggregated[l]?.poop ?? 0),
         totals,
+        days,
       };
     }
   );

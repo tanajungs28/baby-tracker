@@ -22,6 +22,7 @@ export default function SummaryCharts({ summary }: SummaryChartsProps) {
   const chartData = summary.labels.map((label, i) => ({
     name: label,
     授乳: summary.breastfeeding[i],
+    授乳量: summary.breastfeedingMl[i],
     搾乳: summary.pumping[i],
     ミルク: summary.formula[i],
     尿: summary.pee[i],
@@ -29,7 +30,13 @@ export default function SummaryCharts({ summary }: SummaryChartsProps) {
   }));
 
   const hasData = chartData.some(
-    (d) => d.授乳 > 0 || d.搾乳 > 0 || d.ミルク > 0 || d.尿 > 0 || d.便 > 0
+    (d) =>
+      d.授乳 > 0 ||
+      d.授乳量 > 0 ||
+      d.搾乳 > 0 ||
+      d.ミルク > 0 ||
+      d.尿 > 0 ||
+      d.便 > 0
   );
 
   if (!hasData) {
@@ -37,6 +44,15 @@ export default function SummaryCharts({ summary }: SummaryChartsProps) {
   }
 
   const axisStyle = { fill: "#5C4A3D", fontSize: 10 };
+
+  const metrics: Metric[] = [
+    { label: "授乳", total: summary.totals.breastfeeding, unit: "回", color: "#FFB6C8" },
+    { label: "授乳量", total: summary.totals.breastfeedingMl, unit: "ml", color: "#FFB6C8" },
+    { label: "搾乳", total: summary.totals.pumping, unit: "ml", color: "#D8B4FE" },
+    { label: "ミルク", total: summary.totals.formula, unit: "ml", color: "#FEF08A" },
+    { label: "尿", total: summary.totals.pee, unit: "回", color: "#BAE6FD" },
+    { label: "便", total: summary.totals.poop, unit: "回", color: "#C4A882" },
+  ];
 
   return (
     <div className="space-y-6 px-4 py-2">
@@ -53,14 +69,15 @@ export default function SummaryCharts({ summary }: SummaryChartsProps) {
         </ResponsiveContainer>
       </ChartCard>
 
-      {/* ミルク・搾乳量 */}
-      <ChartCard title="🍼 ミルク・搾乳量 (ml)">
+      {/* 飲んだ量（授乳量・ミルク・搾乳） */}
+      <ChartCard title="🍼 飲んだ量 (ml)">
         <ResponsiveContainer width="100%" height={160}>
           <BarChart data={chartData} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#FFD6E0" />
             <XAxis dataKey="name" tick={axisStyle} />
             <YAxis tick={axisStyle} allowDecimals={false} />
             <Tooltip contentStyle={{ borderRadius: 12, fontSize: 12 }} />
+            <Bar dataKey="授乳量" stackId="a" fill="#FFB6C8" radius={[0, 0, 0, 0]} />
             <Bar dataKey="ミルク" stackId="a" fill="#FEF08A" radius={[0, 0, 0, 0]} />
             <Bar dataKey="搾乳" stackId="a" fill="#D8B4FE" radius={[4, 4, 0, 0]} />
             <Legend wrapperStyle={{ fontSize: 11 }} />
@@ -84,29 +101,62 @@ export default function SummaryCharts({ summary }: SummaryChartsProps) {
       </ChartCard>
 
       {/* 合計カード */}
-      <div className="bg-white rounded-2xl p-4 border-2 border-[#FFD6E0]">
-        <h3 className="font-bold text-[#5C4A3D] mb-3">📋 期間の合計</h3>
-        <div className="grid grid-cols-5 gap-2">
-          {[
-            { label: "授乳", value: summary.totals.breastfeeding, unit: "回", color: "#FFB6C8" },
-            { label: "搾乳", value: summary.totals.pumping, unit: "ml", color: "#D8B4FE" },
-            { label: "ミルク", value: summary.totals.formula, unit: "ml", color: "#FEF08A" },
-            { label: "尿", value: summary.totals.pee, unit: "回", color: "#BAE6FD" },
-            { label: "便", value: summary.totals.poop, unit: "回", color: "#C4A882" },
-          ].map(({ label, value, unit, color }) => (
+      <MetricCard title="📋 期間の合計" metrics={metrics} mode="total" days={summary.days} />
+
+      {/* 平均カード */}
+      <MetricCard title="📊 1日あたりの平均" metrics={metrics} mode="average" days={summary.days} />
+    </div>
+  );
+}
+
+interface Metric {
+  label: string;
+  total: number;
+  unit: "回" | "ml";
+  color: string;
+}
+
+function formatAverage(total: number, days: number, unit: "回" | "ml"): string {
+  if (days <= 0) return "0";
+  const value = total / days;
+  if (unit === "ml") return String(Math.round(value));
+  return (Math.round(value * 10) / 10).toString();
+}
+
+function MetricCard({
+  title,
+  metrics,
+  mode,
+  days,
+}: {
+  title: string;
+  metrics: Metric[];
+  mode: "total" | "average";
+  days: number;
+}) {
+  return (
+    <div className="bg-white rounded-2xl p-4 border-2 border-[#FFD6E0]">
+      <h3 className="font-bold text-[#5C4A3D] mb-3">{title}</h3>
+      <div className="grid grid-cols-3 gap-2">
+        {metrics.map(({ label, total, unit, color }) => {
+          const display =
+            mode === "total"
+              ? String(total)
+              : formatAverage(total, days, unit);
+          return (
             <div
               key={label}
               className="flex flex-col items-center rounded-xl p-2"
               style={{ backgroundColor: `${color}40` }}
             >
               <span className="text-lg font-bold text-[#5C4A3D] font-['Nunito']">
-                {value}
+                {display}
               </span>
               <span className="text-[10px] text-[#5C4A3D]/60">{unit}</span>
               <span className="text-[10px] text-[#5C4A3D] mt-0.5">{label}</span>
             </div>
-          ))}
-        </div>
+          );
+        })}
       </div>
     </div>
   );
