@@ -110,7 +110,10 @@ export function useSummary(
         bfMlAggregated[l] = 0;
       });
 
-      records.forEach((r) => {
+      // 吐き戻しはグラフ集計の対象外
+      const summaryRecords = records.filter((r) => r.type !== "spitup");
+
+      summaryRecords.forEach((r) => {
         let label: string;
         if (period === "day") {
           const d = new Date(r.recorded_date + "T00:00:00");
@@ -149,7 +152,8 @@ export function useSummary(
         pee: 0,
         poop: 0,
       };
-      records.forEach((r) => {
+      summaryRecords.forEach((r) => {
+        if (r.type === "spitup") return;
         const isAmountType = r.type === "pumping" || r.type === "formula";
         totals[r.type] += isAmountType ? (r.amount_ml ?? 0) : (r.count ?? 0);
         if (r.type === "breastfeeding") {

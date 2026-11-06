@@ -1,4 +1,10 @@
-export type RecordType = "breastfeeding" | "pumping" | "formula" | "pee" | "poop";
+export type RecordType =
+  | "breastfeeding"
+  | "pumping"
+  | "formula"
+  | "pee"
+  | "poop"
+  | "spitup";
 
 export interface Baby {
   id: string;
@@ -28,6 +34,7 @@ export const RECORD_TYPES: RecordType[] = [
   "formula",
   "pee",
   "poop",
+  "spitup",
 ];
 
 export const RECORD_TYPE_LABELS: { [K in RecordType]: string } = {
@@ -36,6 +43,7 @@ export const RECORD_TYPE_LABELS: { [K in RecordType]: string } = {
   formula: "ミルク",
   pee: "尿",
   poop: "便",
+  spitup: "吐き戻し",
 };
 
 export const RECORD_TYPE_COLORS: { [K in RecordType]: string } = {
@@ -44,6 +52,7 @@ export const RECORD_TYPE_COLORS: { [K in RecordType]: string } = {
   formula: "#FEF08A",
   pee: "#BAE6FD",
   poop: "#C4A882",
+  spitup: "#A7F3D0",
 };
 
 export const RECORD_TYPE_EMOJIS: { [K in RecordType]: string } = {
@@ -52,7 +61,21 @@ export const RECORD_TYPE_EMOJIS: { [K in RecordType]: string } = {
   formula: "🍼",
   pee: "💧",
   poop: "🟤",
+  spitup: "🫧",
 };
+
+export interface HourlyNote {
+  id: string;
+  user_id: string;
+  baby_id: string;
+  recorded_date: string;
+  recorded_hour: number;
+  note: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export const NOTE_MAX_LENGTH = 500;
 
 export type SleepPerson = "papa" | "mama";
 

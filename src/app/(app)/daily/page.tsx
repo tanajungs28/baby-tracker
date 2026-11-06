@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useBaby } from "@/hooks/useBaby";
 import { useRecords } from "@/hooks/useRecords";
+import { useNotes } from "@/hooks/useNotes";
 import RecordMatrix from "@/components/daily/RecordMatrix";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -41,6 +42,7 @@ export default function DailyPage() {
   const isToday = isSameDay(selectedDate, today);
   const { baby } = useBaby();
   const { records, upsertRecord, deleteRecord } = useRecords(baby?.id, selectedDate);
+  const { notes, saveNote, deleteNote } = useNotes(baby?.id, selectedDate);
 
   return (
     <div className="flex flex-col h-full">
@@ -95,19 +97,22 @@ export default function DailyPage() {
             isToday={isToday}
             onUpsert={upsertRecord}
             onDelete={deleteRecord}
+            notes={notes}
+            onSaveNote={saveNote}
+            onDeleteNote={deleteNote}
           />
         ) : (
           <div className="px-2 pt-2 space-y-1">
             <div className="flex gap-1 mb-2">
               <Skeleton className="w-12 h-10" />
-              {Array.from({ length: 5 }).map((_, i) => (
+              {Array.from({ length: 7 }).map((_, i) => (
                 <Skeleton key={i} className="flex-1 h-10" />
               ))}
             </div>
             {Array.from({ length: 10 }).map((_, row) => (
               <div key={row} className="flex gap-1">
                 <Skeleton className="w-12 h-11" />
-                {Array.from({ length: 5 }).map((_, col) => (
+                {Array.from({ length: 7 }).map((_, col) => (
                   <Skeleton key={col} className="flex-1 h-11" />
                 ))}
               </div>

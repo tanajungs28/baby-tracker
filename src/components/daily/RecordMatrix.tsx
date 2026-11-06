@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useEffect, useState } from "react";
-import type { BabyRecord, RecordType } from "@/lib/types";
+import type { BabyRecord, HourlyNote, RecordType } from "@/lib/types";
 import {
   RECORD_TYPES,
   RECORD_TYPE_LABELS,
@@ -9,6 +9,7 @@ import {
   RECORD_TYPE_EMOJIS,
 } from "@/lib/types";
 import InputModal from "./InputModal";
+import NoteModal from "./NoteModal";
 
 interface RecordMatrixProps {
   records: BabyRecord[];
@@ -21,10 +22,16 @@ interface RecordMatrixProps {
     amount_ml: number | null
   ) => void;
   onDelete: (hour: number, type: RecordType) => void;
+  notes: HourlyNote[];
+  onSaveNote: (hour: number, note: string) => void;
+  onDeleteNote: (hour: number) => void;
 }
 
 function getCellValue(record: BabyRecord | undefined, type: RecordType): string {
   if (!record) return "";
+  if (type === "spitup") {
+    return record.amount_ml ? `${record.amount_ml}ml` : "あり";
+  }
   if (type === "pumping" || type === "formula") {
     return record.amount_ml ? `${record.amount_ml}ml` : "";
   }
@@ -56,6 +63,7 @@ function calcTotals(records: BabyRecord[]): { [K in RecordType]: TypeTotal } {
     formula: { count: 0, ml: 0 },
     pee: { count: 0, ml: 0 },
     poop: { count: 0, ml: 0 },
+    spitup: { count: 0, ml: 0 },
   };
   records.forEach((r) => {
     totals[r.type].count += r.count ?? 0;
@@ -68,7 +76,7 @@ function formatTotal(type: RecordType, total: TypeTotal): string {
   if (type === "pumping" || type === "formula") {
     return total.ml > 0 ? `${total.ml}ml` : "−";
   }
-  if (type === "breastfeeding") {
+  if (type === "breastfeeding" || type === "spitup") {
     const parts: string[] = [];
     if (total.count > 0) parts.push(`${total.count}回`);
     if (total.ml > 0) parts.push(`${total.ml}ml`);
@@ -83,9 +91,13 @@ export default function RecordMatrix({
   isToday,
   onUpsert,
   onDelete,
+  notes,
+  onSaveNote,
+  onDeleteNote,
 }: RecordMatrixProps) {
   const currentHour = new Date().getHours();
   const [modal, setModal] = useState<{ hour: number; type: RecordType } | null>(null);
+  const [noteHour, setNoteHour] = useState<number | null>(null);
   const currentRowRef = useRef<HTMLTableRowElement>(null);
 
   useEffect(() => {
@@ -110,16 +122,32 @@ export default function RecordMatrix({
     setModal(null);
   }
 
+  function getNote(hour: number): string {
+    return notes.find((n) => n.recorded_hour === hour)?.note ?? "";
+  }
+
+  function handleSaveNote(note: string) {
+    if (noteHour === null) return;
+    onSaveNote(noteHour, note);
+    setNoteHour(null);
+  }
+
+  function handleClearNote() {
+    if (noteHour === null) return;
+    onDeleteNote(noteHour);
+    setNoteHour(null);
+  }
+
   const totals = calcTotals(records);
   const modalRecord = modal ? getRecord(modal.hour, modal.type) : undefined;
 
   return (
     <>
-      <table className="w-full border-collapse text-xs" style={{ minWidth: "340px" }}>
+      <table className="w-full border-collapse text-xs" style={{ minWidth: "560px" }}>
         <thead className="sticky top-0 z-10 bg-[#FFF9F2]">
           {/* 項目名 */}
           <tr>
-            <th className="w-12 py-2 text-center text-[#5C4A3D]/40 font-normal text-xs border-b border-[#FFD6E0]">
+            <th className="sticky left-0 z-10 bg-[#FFF9F2] w-12 py-2 text-center text-[#5C4A3D]/40 font-normal text-xs border-b border-[#FFD6E0]">
               時間
             </th>
             {RECORD_TYPES.map((type) => (
@@ -133,10 +161,16 @@ export default function RecordMatrix({
                 </div>
               </th>
             ))}
+            <th className="w-36 py-2 text-center font-medium text-[#5C4A3D] border-b border-[#FFD6E0]">
+              <div className="flex flex-col items-center gap-0.5">
+                <span className="text-base">📝</span>
+                <span className="text-[10px]">メモ</span>
+              </div>
+            </th>
           </tr>
           {/* 合計行 */}
           <tr className="bg-[#FFF9F2]">
-            <td className="py-1 text-center text-[#5C4A3D]/40 text-[10px] border-b-2 border-[#FFD6E0]">
+            <td className="sticky left-0 z-10 bg-[#FFF9F2] py-1 text-center text-[#5C4A3D]/40 text-[10px] border-b-2 border-[#FFD6E0]">
               合計
             </td>
             {RECORD_TYPES.map((type) => {
@@ -160,6 +194,7 @@ export default function RecordMatrix({
                 </td>
               );
             })}
+            <td className="border-b-2 border-[#FFD6E0]" />
           </tr>
         </thead>
         <tbody>
@@ -171,7 +206,7 @@ export default function RecordMatrix({
                 ref={isCurrentHour ? currentRowRef : undefined}
                 className={isCurrentHour ? "bg-[#FFD6E0]/40" : ""}
               >
-                <td className="py-1.5 text-center text-[#5C4A3D]/50 border-b border-[#FFD6E0]/40 text-xs">
+                <td className={`sticky left-0 z-[1] ${isCurrentHour ? "bg-[#FFEDF1]" : "bg-[#FFF9F2]"} py-1.5 text-center text-[#5C4A3D]/50 border-b border-[#FFD6E0]/40 text-xs`}>
                   <div className="flex items-center justify-center gap-0.5">
                     {isCurrentHour && (
                       <span className="text-[#FF8FA3] text-[10px]">▶</span>
@@ -211,6 +246,9 @@ export default function RecordMatrix({
                     </td>
                   );
                 })}
+                <td className="py-1 px-0.5 border-b border-[#FFD6E0]/40">
+                  <NoteCell hour={hour} note={getNote(hour)} onOpen={() => setNoteHour(hour)} />
+                </td>
               </tr>
             );
           })}
@@ -227,6 +265,43 @@ export default function RecordMatrix({
           onClose={() => setModal(null)}
         />
       )}
+
+      {noteHour !== null && (
+        <NoteModal
+          hour={noteHour}
+          existing={getNote(noteHour)}
+          onSave={handleSaveNote}
+          onClear={handleClearNote}
+          onClose={() => setNoteHour(null)}
+        />
+      )}
     </>
+  );
+}
+
+function NoteCell({
+  hour,
+  note,
+  onOpen,
+}: {
+  hour: number;
+  note: string;
+  onOpen: () => void;
+}) {
+  return (
+    <button
+      onClick={onOpen}
+      aria-label={`${hour}時のメモを${note ? "編集" : "記入"}`}
+      className="w-full min-h-[44px] rounded-xl px-2 py-1 flex items-center text-left active:scale-95 transition-transform"
+      style={{ backgroundColor: note ? "#FFE4B560" : "transparent" }}
+    >
+      {note ? (
+        <span className="text-[10px] leading-snug text-[#5C4A3D] line-clamp-2 break-all whitespace-pre-line">
+          {note}
+        </span>
+      ) : (
+        <span className="text-[#5C4A3D]/15 text-xs w-full text-center">·</span>
+      )}
+    </button>
   );
 }

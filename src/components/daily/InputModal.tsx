@@ -14,6 +14,7 @@ interface InputModalProps {
 }
 
 const ML_OPTIONS = Array.from({ length: 40 }, (_, i) => (i + 1) * 5);
+const SPITUP_ML_OPTIONS = Array.from({ length: 15 }, (_, i) => (i + 1) * 10);
 
 export default function InputModal({
   hour,
@@ -25,15 +26,20 @@ export default function InputModal({
 }: InputModalProps) {
   const [count, setCount] = useState<number>(existing?.count ?? 0);
   const [amountMl, setAmountMl] = useState<number>(existing?.amount_ml ?? 0);
+  const [hasSpitup, setHasSpitup] = useState<boolean>(existing !== undefined);
 
   const isBreastfeeding = type === "breastfeeding";
+  const isSpitup = type === "spitup";
   const isAmountType = type === "pumping" || type === "formula";
   const color = RECORD_TYPE_COLORS[type];
   const label = RECORD_TYPE_LABELS[type];
   const emoji = RECORD_TYPE_EMOJIS[type];
 
   function handleSave() {
-    if (isBreastfeeding) {
+    if (isSpitup) {
+      if (hasSpitup) onSave(1, amountMl || null);
+      else onClear();
+    } else if (isBreastfeeding) {
       onSave(count || null, amountMl || null);
     } else if (isAmountType) {
       onSave(null, amountMl || null);
@@ -79,7 +85,29 @@ export default function InputModal({
         </div>
 
         {/* 入力エリア */}
-        {isBreastfeeding ? (
+        {isSpitup ? (
+          <div className="space-y-6">
+            <section>
+              <p className="text-[#5C4A3D]/60 text-sm font-medium mb-3 text-center">
+                吐き戻し
+              </p>
+              <PresenceToggle value={hasSpitup} onChange={setHasSpitup} color={color} />
+            </section>
+            {hasSpitup && (
+              <section>
+                <p className="text-[#5C4A3D]/60 text-sm font-medium mb-3 text-center">
+                  量（10ml単位）
+                </p>
+                <AmountInput
+                  value={amountMl}
+                  onChange={setAmountMl}
+                  color={color}
+                  options={SPITUP_ML_OPTIONS}
+                />
+              </section>
+            )}
+          </div>
+        ) : isBreastfeeding ? (
           <div className="space-y-6">
             <section>
               <p className="text-[#5C4A3D]/60 text-sm font-medium mb-3 text-center">
@@ -160,18 +188,51 @@ function CountInput({
   );
 }
 
-function AmountInput({
+function PresenceToggle({
   value,
   onChange,
   color,
 }: {
+  value: boolean;
+  onChange: (v: boolean) => void;
+  color: string;
+}) {
+  const choices = [
+    { label: "なし", active: !value, onClick: () => onChange(false) },
+    { label: "あり", active: value, onClick: () => onChange(true) },
+  ];
+  return (
+    <div className="flex justify-center gap-3" role="group" aria-label="吐き戻しの有無">
+      {choices.map((c) => (
+        <button
+          key={c.label}
+          onClick={c.onClick}
+          aria-pressed={c.active}
+          className="w-28 h-14 rounded-2xl font-bold text-base active:scale-95 transition-transform"
+          style={{
+            backgroundColor: c.active ? color : "#fff",
+            color: "#5C4A3D",
+            border: `2px solid ${c.active ? color : "#FFD6E0"}`,
+          }}
+        >
+          {c.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function AmountInput({
+  value,
+  onChange,
+  color,
+  options = ML_OPTIONS,
+}: {
   value: number;
   onChange: (v: number) => void;
   color: string;
+  options?: number[];
 }) {
-  const idx = ML_OPTIONS.indexOf(value);
-  const selectedIdx = idx >= 0 ? idx : -1;
-
   return (
     <div>
       <div className="text-center mb-4">
@@ -181,7 +242,7 @@ function AmountInput({
         <span className="text-lg text-[#5C4A3D]/60 ml-1">ml</span>
       </div>
       <div className="flex gap-2 overflow-x-auto pb-2 snap-x scrollbar-hide">
-        {ML_OPTIONS.map((ml) => (
+        {options.map((ml) => (
           <button
             key={ml}
             onClick={() => onChange(ml)}
